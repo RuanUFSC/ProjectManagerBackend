@@ -21,5 +21,6 @@ db.sequelize = sequelize;
 
 db.project = require("./projects_model.js")(sequelize, Sequelize);
 db.users = require("./users_model.js")(sequelize, Sequelize);
+db.projectZipcode = require("./project_zipcode_model.js")(sequelize, Sequelize);
 
 module.exports = db;

@@ -37,9 +37,11 @@ exports.create = (req, res) => {
 exports.findOne = (req, res) => {
 
     const user = {
-        username: req.body.username,
-        password: req.body.password
+        username: req.query.username,
+        password: req.query.password
     };
+    
+    console.log(req.query)
 
     const query = `SELECT id FROM USERS WHERE username = '${user.username}' AND password = crypt('${user.password}', password)`;
 
@@ -48,15 +50,15 @@ exports.findOne = (req, res) => {
         .then(data => {
             if(data[0][0]) {
                 var id = (data[0][0].id);
-                res.send(`Usuário ${user.username} logado com sucesso, id ${id}.`);
+                res.send(data[0][0]);
             } else {
-                res.send('Usuário ou senha incorreto.')
+                res.status(201).send('Usuário ou senha incorreto.')
             }
         })
         .catch(err => {
-            res.status(500).send({
+            res.status(404).send({
                 message:
-                err.message || "Ocorreu um erro na requisição de login."
+                err.message || "Usuário ou senha incorreto."
             });
         });
   };

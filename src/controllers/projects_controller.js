@@ -1,5 +1,6 @@
 const db = require("../models");
 const Project = db.project;
+const Zipcode = db.projectZipcode;
 const Op = db.Sequelize.Op;
 let Correios = require('node-correios');
 let correios = new Correios();
@@ -7,7 +8,7 @@ let correios = new Correios();
 // Criação de novo projeto
 exports.create = (req, res) => {
 
-    // Validção da requisição
+    // Validação da requisição
     if (!req.body.title || !req.body.zip_code || !req.body.cost || !req.body.deadline || !req.headers.username) {
       res.status(400).send({
         message: "Todos os campos devem ser preenchidos"
@@ -28,9 +29,28 @@ exports.create = (req, res) => {
     // Salva projeto no banco de dados
     Project.create(project)
     .then(data => {
+      console.log(data.dataValues.id);
+
+      correios.consultaCEP({ cep: data.dataValues.zip_code.toString() })
+        .then(result => {
+
+          if(result.localidade !== undefined && result.uf !== undefined) {
+            var local = result.bairro + ' - ' + result.localidade + '/' + result.uf;     
+          } else {
+            var local = (`CEP ${data.dataValues.zip_code.toString()} não localizado na base de dados`);
+          }   
+
+          var zipcodeObj = {
+            id: data.dataValues.id,
+            zip_code: data.dataValues.zip_code,
+            address: local,
+          } 
+          Zipcode.create(zipcodeObj)
+        })    
       res.send(data);
     })
     .catch(err => {
+      //console.log(err.original);
       res.status(500).send({
         message:
           err.message || "Ocorreu um erro no cadastro do projetos."
@@ -41,19 +61,28 @@ exports.create = (req, res) => {
 // Retorna todos os projetos do usuário
 exports.findAll = (req, res) => {
 
+    //console.log(req.headers)
     var username = req.headers.username;
     var condition = { username: username }
 
-    Project.findAll({ where: condition })
-    .then(data => {
-      res.send(data);
-    })
-    .catch(err => {
-      res.status(500).send({
-        message:
-        err.message || "Ocorreu um erro na consulta dos projetos."
-      });
-    });
+    const query = `SELECT * FROM public.projects P LEFT JOIN public."projectZipcodes" ZIP ON P.ID = ZIP.ID WHERE username = '${username}'`;
+
+    Project.sequelize.query(query)
+        .then(data => {
+            if(data[0][0].title !== '') {
+              //console.log(data[0])
+                res.send(data[0]);
+            } else {
+                //console.log('Nenhum projeto localizado')
+                res.status(201).send({ title: 'Nenhum projeto localizado'})
+            }
+        })
+        .catch(err => {
+            res.status(404).send({
+                message:
+                err.message || "Nenhum projeto localizado."
+            });
+        });
 };
 
 // Retorna um projeto pelo id
@@ -153,10 +182,11 @@ exports.makeDone = (req, res) => {
 
 // Apaga um projeto pelo id
 exports.delete = (req, res) => {
-    const id = req.params.id;
-  
+    var id = req.params.id;
+    var username = req.headers.username
+
     Project.destroy({
-      where: { id: id }
+      where: { id: id, username: username }
     })
     .then(num => {
       if (num == 1) {
