@@ -1,6 +1,4 @@
 
-**
-
 #  Seja bem-vindo ao Project Manager, espero que goste :D
 
 A aplicação apresenta páginas de login, cadastro e gerenciamento de projetos, permitindo a consulta, alteração, inclusão e remoção de dados.
