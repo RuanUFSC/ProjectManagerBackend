@@ -27,10 +27,14 @@ exports.create = (req, res) => {
             res.send(`Usuário ${user.username} criado com sucesso`);
         })
         .catch(err => {
-            res.status(500).send({
-                message:
-                err.message || "Ocorreu um erro no cadastro do usuário."
-            });
+            if(err.errors[0].message == 'username must be unique') {
+                res.status(500).send({ message: 'Username já foi usado'})
+            } else {
+                res.status(500).send({
+                    message:
+                    err.message || "Ocorreu um erro no cadastro do usuário."
+                });
+            }            
         });
   };
 
