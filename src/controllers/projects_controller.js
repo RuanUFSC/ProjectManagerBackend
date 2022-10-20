@@ -8,6 +8,8 @@ let correios = new Correios();
 // Criação de novo projeto
 exports.create = (req, res) => {
 
+  console.log(req.body.deadline )
+  console.log(req.body.deadline +' 03:00' )
     // Validação da requisição
     if (!req.body.title || !req.body.zip_code || !req.body.cost || !req.body.deadline || !req.headers.username) {
       res.status(400).send({
@@ -22,7 +24,7 @@ exports.create = (req, res) => {
         zip_code: req.body.zip_code,
         cost: req.body.cost,
         done: false,
-        deadline: req.body.deadline,
+        deadline: req.body.deadline + ' 00:00',
         username: req.headers.username
     };
   
@@ -65,7 +67,7 @@ exports.findAll = (req, res) => {
     var username = req.headers.username;
     var condition = { username: username }
 
-    const query = `SELECT * FROM public.projects P LEFT JOIN public."projectZipcodes" ZIP ON P.ID = ZIP.ID WHERE username = '${username}'`;
+    const query = `SELECT * FROM public.projects P LEFT JOIN public."projectZipcodes" ZIP ON P.ID = ZIP.ID WHERE username = '${username}' ORDER BY p."done" `;
 
     Project.sequelize.query(query)
         .then(data => {
@@ -134,7 +136,7 @@ exports.findOne = (req, res) => {
 // Atualiza um projeto utilizando seu id
 exports.update = (req, res) => {
     const id = req.params.id;
-  
+
     Project.update(req.body, {
       where: { id: id }
     })
@@ -154,6 +156,27 @@ exports.update = (req, res) => {
         message: "Erro ao atualizar o projeto de id=" + id
       });
     });
+
+    var zipcode = req.body.zip_code.toString();
+
+    correios.consultaCEP({ cep: zipcode })
+    .then(result => {
+
+      if(result.localidade !== undefined && result.uf !== undefined) {
+        var local = result.bairro + ' - ' + result.localidade + '/' + result.uf;     
+      } else {
+        var local = (`CEP ${zipcode} não localizado na base de dados`);
+      }   
+
+      var zipcodeObj = {
+        zip_code: zipcode,
+        address: local,
+      };
+
+      Zipcode.update(zipcodeObj, {
+      where: { id: id }
+    })  
+  })
 };
 
 // Marca projeto como concluído pelo seu id
